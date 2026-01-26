@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SquadSync - Find when everyone's free</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+        }
+        
+        .bg-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .bg-gray {
+            background: #f9fafb;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 28rem;
+            width: 100%;
+        }
+        
+        .calendar-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-width: 56rem;
+            margin: 0 auto;
+        }
+        
+        .icon-circle {
+            width: 5rem;
+            height: 5rem;
+            background: #e0e7ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+            flex: 1;
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1;
+            border-radius: 0.5rem;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            position: relative;
+        }
+        
+        .calendar-day:hover:not(:disabled) {
+            opacity: 0.8;
+        }
+        
+        .calendar-day:disabled {
+            cursor: not-allowed;
+        }
+        
+        .day-header {
+            text-align: center;
+            font-weight: 600;
+            color: #4b5563;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .bg-green { background: #10b981; color: white; }
+        .bg-orange { background: #f59e0b; color: white; }
+        .bg-red { background: #ef4444; color: white; }
+        .bg-gray-light { background: #f3f4f6; color: #9ca3af; }
+        
+        .checkmark {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            width: 0.75rem;
+            height: 0.75rem;
+            color: white;
+        }
+        
+        .error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #991b1b;
+            font-size: 0.875rem;
+        }
+        
+        .link-box {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .link-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: white;
+            border: 1px solid #a5b4fc;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-family: monospace;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin: 0.25rem;
+        }
+        
+        .badge-primary {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .badge-gray {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .hidden { display: none; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-4 { margin-bottom: 1.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 1.5rem; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .flex { display: flex; }
+        .gap-2 { gap: 0.5rem; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        // Storage
+        const storage = new Map();
+        
+        const db = {
+            save: (id, data) => storage.set(id, data),
+            get: (id) => storage.get(id) || null
+        };
+        
+        // Utilities
+        const generateId = () => Math.random().toString(36).substring(2, 9);
+        
+        const getDateKey = (date) => {
+            const d = new Date(date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+        
+        const getMonthDates = (year, month) => {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const dates = [];
+            
+            let startDay = firstDay.getDay();
+            startDay = startDay === 0 ? 6 : startDay - 1;
+            
+            for (let i = 0; i < startDay; i++) {
+                dates.push(null);
+            }
+            
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                dates.push(new Date(year, month, day));
+            }
+            
+            return dates;
+        };
+        
+        // App State
+        let state = {
+            screen: 'landing',
+            groupId: null,
+            groupData: null,
+            userName: '',
+            currentDate: new Date(),
+            showCreateForm: false,
+            newSquadName: '',
+            inputName: '',
+            error: null,
+            showLinkBox: false,
+            initialized: false
+        };
+        
+        // Initialize
+        function init() {
+            if (state.initialized) return;
+            state.initialized = true;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlGroupId = urlParams.get('group');
+            
+            if (urlGroupId) {
+                const group = db.get(urlGroupId);
+                if (group) {
+                    state.groupId = urlGroupId;
+                    state.groupData = group;
+                    
+                    const savedName = localStorage.getItem(`squadsync_user_${urlGroupId}`);
+                    if (savedName && group.members[savedName]) {
+                        state.userName = savedName;
+                        state.screen = 'group';
+                    } else {
+                        state.screen = 'join';
+                    }
+                } else {
+                    state.error = 'Group not found.';
+                }
+            }
+            
+            render();
+        }
+        
+        // Actions
+        function createSquad() {
+            if (!state.newSquadName.trim()) {
+                state.error = 'Please enter a squad name';
+                render();
+                return;
+            }
+            
+            const newId = generateId();
+            const newGroup = {
+                name: state.newSquadName.trim(),
+                members: {},
+                availability: {}
+            };
+            
+            db.save(newId, newGroup);
+            
+            state.groupId = newId;
+            state.groupData = newGroup;
+            state.screen = 'join';
+            state.showCreateForm = false;
+            state.newSquadName = '';
+            state.error = null;
+            
+            // Update URL (will work when deployed to your domain)
+            try {
+                window.history.pushState({}, '', `?group=${newId}`);
+            } catch (e) {
+                // Ignore in sandbox environments
+            }
+            render();
+        }
+        
+        function joinGroup() {
+            if (!state.inputName.trim()) {
+                state.error = 'Please enter your name';
+                render();
+                return;
+            }
+            
+            state.groupData.members[state.inputName.trim()] = { joinedAt: Date.now() };
+            db.save(state.groupId, state.groupData);
+            
+            localStorage.setItem(`squadsync_user_${state.groupId}`, state.inputName.trim());
+            state.userName = state.inputName.trim();
+            state.screen = 'group';
+            state.error = null;
+            
+            render();
+        }
+        
+        function toggleAvailability(date) {
+            const dateKey = getDateKey(date);
+            if (!state.groupData.availability[dateKey]) {
+                state.groupData.availability[dateKey] = {};
+            }
+            
+            if (state.groupData.availability[dateKey][state.userName]) {
+                delete state.groupData.availability[dateKey][state.userName];
+            } else {
+                state.groupData.availability[dateKey][state.userName] = true;
+            }
+            
+            db.save(state.groupId, state.groupData);
+            render();
+        }
+        
+        function getDateStatus(date) {
+            const dateKey = getDateKey(date);
+            const availability = state.groupData.availability[dateKey] || {};
+            const members = Object.keys(state.groupData.members);
+            const available = Object.keys(availability);
+            
+            if (available.length === 0) return 'none';
+            if (available.length === members.length && members.length > 0) return 'all';
+            return 'some';
+        }
+        
+        function isUserAvailable(date) {
+            const dateKey = getDateKey(date);
+            return state.groupData.availability[dateKey]?.[state.userName] || false;
+        }
+        
+        // Render
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (state.screen === 'landing') {
+                app.innerHTML = `
+                    <div class="bg-gradient">
+                        <div class="card">
+                            <div class="text-center mb-4">
+                                <div class="icon-circle">
+                                    <svg width="40" height="40" fill="none" stroke="#4f46e5" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    </svg>
+                                </div>
+                                <h1 style="font-size: 2.25rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">SquadSync</h1>
+                                <p style="color: #6b7280;">Find when everyone's free</p>
+                            </div>
+                            
+                            ${state.error ? `<div class="error-box">${state.error}</div>` : ''}
+                            
+                            ${!state.showCreateForm ? `
+                                <button class="btn btn-primary" onclick="state.showCreateForm = true; state.error = null; render();">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Create New Squad
+                                </button>
+                                <p class="text-center text-sm mt-4" style="color: #6b7280;">
+                                    To join an existing squad, ask a member to share their group link!
+                                </p>
+                            ` : `
+                                <div>
+                                    <label style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">
+                                        Squad Name
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="input mb-2" 
+                                        placeholder="e.g., Beach Weekend, Game Night..."
+                                        value="${state.newSquadName}"
+                                        oninput="state.newSquadName = this.value"
+                                        onkeypress="if(event.key === 'Enter') createSquad()"
+                                        autofocus
+                                    >
+                                    <div class="flex gap-2">
+                                        <button class="btn btn-secondary" onclick="state.showCreateForm = false; state.newSquadName = ''; state.error = null; render();">
+                                            Cancel
+                                        </button>
+                                        <button class="btn btn-primary" onclick="createSquad()">
+                                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            Create
+                                        </button>
+                                    </div>
+                                </div>
+                            `}
+                            
+                            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                                <h3 style="font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">How it works:</h3>
+                                <ul style="list-style: none;">
+                                    <li class="flex gap-2 mb-1" style="font-size: 0.875rem; color: #6b7280;">
+                                        <span style="color: #4f46e5; font-weight: bold;">1.</span>
+                                        <span>Create a squad and share the link</span>
+                                    </li>
+                                    <li class="flex gap-2 mb-1" style="font-size: 0.875rem; color: #6b7280;">
+                                        <span style="color: #4f46e5; font-weight: bold;">2.</span>
+                                        <span>Everyone marks when they're free</span>
+                                    </li>
+                                    <li class="flex gap-2" style="font-size: 0.875rem; color: #6b7280;">
+                                        <span style="color: #4f46e5; font-weight: bold;">3.</span>
+                                        <span>See when the whole squad can meet</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (state.screen === 'join') {
+                app.innerHTML = `
+                    <div class="bg-gradient">
+                        <div class="card">
+                            <div class="text-center mb-4">
+                                <div class="icon-circle">
+                                    <svg width="32" height="32" fill="none" stroke="#4f46e5" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    </svg>
+                                </div>
+                                <h2 style="font-size: 1.5rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">
+                                    Join ${state.groupData.name}
+                                </h2>
+                                <p style="color: #6b7280;">Enter your name to continue</p>
+                            </div>
+                            
+                            ${state.error ? `<div class="error-box">${state.error}</div>` : ''}
+                            
+                            <input 
+                                type="text" 
+                                class="input mb-2" 
+                                placeholder="Your name"
+                                value="${state.inputName}"
+                                oninput="state.inputName = this.value"
+                                onkeypress="if(event.key === 'Enter') joinGroup()"
+                                autofocus
+                            >
+                            <button class="btn btn-primary" onclick="joinGroup()">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Join Squad
+                            </button>
+                            
+                            ${Object.keys(state.groupData.members).length > 0 ? `
+                                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                                    <p class="text-sm mb-1" style="color: #6b7280;">Already in the squad:</p>
+                                    <div>
+                                        ${Object.keys(state.groupData.members).map(m => 
+                                            `<span class="badge badge-gray">${m}</span>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            } else if (state.screen === 'group') {
+                const monthDates = getMonthDates(state.currentDate.getFullYear(), state.currentDate.getMonth());
+                const monthName = state.currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                
+                app.innerHTML = `
+                    <div class="bg-gray">
+                        <div class="calendar-card mb-2">
+                            <div class="flex justify-between items-center mb-4">
+                                <div>
+                                    <h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937;">${state.groupData.name}</h1>
+                                    <p style="color: #6b7280;">Welcome, ${state.userName}!</p>
+                                </div>
+                                <button class="btn btn-primary" style="width: auto;" onclick="state.showLinkBox = !state.showLinkBox; render();">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                    </svg>
+                                    Share Link
+                                </button>
+                            </div>
+                            
+                            ${state.showLinkBox ? `
+                                <div class="link-box">
+                                    <p style="font-size: 0.875rem; font-weight: 500; color: #312e81; margin-bottom: 0.5rem;">
+                                        Share this link with your squad:
+                                    </p>
+                                    <div class="flex gap-2 items-center">
+                                        <input 
+                                            type="text" 
+                                            class="link-input" 
+                                            value="${window.location.origin}${window.location.pathname}?group=${state.groupId}"
+                                            readonly
+                                            onclick="this.select()"
+                                        >
+                                        <button 
+                                            style="color: #4f46e5; font-weight: 500; font-size: 0.875rem; background: none; border: none; cursor: pointer;"
+                                            onclick="state.showLinkBox = false; render();"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                    <p class="text-xs mt-2" style="color: #4338ca;">Click the link to select it, then copy (Ctrl+C or Cmd+C)</p>
+                                </div>
+                            ` : ''}
+                            
+                            <div>
+                                ${Object.keys(state.groupData.members).map(m => 
+                                    `<span class="badge ${m === state.userName ? 'badge-primary' : 'badge-gray'}">${m}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="calendar-card">
+                            <div class="flex justify-between items-center mb-4">
+                                <button 
+                                    style="padding: 0.5rem 1rem; color: #6b7280; background: none; border: none; border-radius: 0.5rem; cursor: pointer;"
+                                    onmouseover="this.style.background='#f3f4f6'"
+                                    onmouseout="this.style.background='none'"
+                                    onclick="state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1); render();"
+                                >
+                                    ← Prev
+                                </button>
+                                <h2 style="font-size: 1.25rem; font-weight: bold; color: #1f2937;">${monthName}</h2>
+                                <button 
+                                    style="padding: 0.5rem 1rem; color: #6b7280; background: none; border: none; border-radius: 0.5rem; cursor: pointer;"
+                                    onmouseover="this.style.background='#f3f4f6'"
+                                    onmouseout="this.style.background='none'"
+                                    onclick="state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 1); render();"
+                                >
+                                    Next →
+                                </button>
+                            </div>
+                            
+                            <div class="flex gap-2 mb-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <div style="width: 1rem; height: 1rem; background: #10b981; border-radius: 0.25rem;"></div>
+                                    <span style="color: #6b7280;">Everyone free</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div style="width: 1rem; height: 1rem; background: #f59e0b; border-radius: 0.25rem;"></div>
+                                    <span style="color: #6b7280;">Some free</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div style="width: 1rem; height: 1rem; background: #ef4444; border-radius: 0.25rem;"></div>
+                                    <span style="color: #6b7280;">None free</span>
+                                </div>
+                            </div>
+                            
+                            <div class="calendar-grid">
+                                ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => 
+                                    `<div class="day-header">${day}</div>`
+                                ).join('')}
+                                ${monthDates.map((date, i) => {
+                                    if (!date) return '<div></div>';
+                                    
+                                    const status = getDateStatus(date);
+                                    const isAvail = isUserAvailable(date);
+                                    const isPast = date < new Date().setHours(0, 0, 0, 0);
+                                    
+                                    let colorClass = 'bg-gray-light';
+                                    if (!isPast) {
+                                        if (status === 'all') colorClass = 'bg-green';
+                                        else if (status === 'some') colorClass = 'bg-orange';
+                                        else if (status === 'none') colorClass = 'bg-red';
+                                    }
+                                    
+                                    return `
+                                        <button 
+                                            class="calendar-day ${colorClass}" 
+                                            ${isPast ? 'disabled' : ''}
+                                            onclick="${!isPast ? `toggleAvailability(new Date(${date.getFullYear()}, ${date.getMonth()}, ${date.getDate()}))` : ''}"
+                                        >
+                                            ${date.getDate()}
+                                            ${isAvail && !isPast ? '<span class="checkmark">✓</span>' : ''}
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            <p class="text-center text-sm mt-4" style="color: #6b7280;">
+                                Click any date to mark when you're available
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Start app
+        init();
+    </script>
+</body>
+</html>
