@@ -25,7 +25,7 @@
         .cal-day:hover:not(:disabled) { opacity: 0.8; }
         .cal-day:disabled { cursor: not-allowed; }
         .day-header { text-align: center; font-weight: 600; color: #4b5563; padding: 0.5rem; font-size: 0.875rem; }
-        .bg-green { background: #10b981; color: white; }
+        .bg-green { background: #22c55e; color: white; }
         .bg-orange { background: #f59e0b; color: white; }
         .bg-red { background: #ef4444; color: white; }
         .bg-gray-light { background: #f3f4f6; color: #9ca3af; }
@@ -78,18 +78,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        console.log('✅ Firebase initialized successfully');
-
-        // Test Firebase connection
-        (async () => {
-            try {
-                const testDoc = await getDoc(doc(db, 'groups', 'test'));
-                console.log('✅ Firestore connection successful');
-            } catch (error) {
-                console.error('❌ Firestore connection failed:', error);
-                alert('Firebase Error: ' + error.message + '\n\nCheck console for details.');
-            }
-        })();
 
         const generateId = () => Math.random().toString(36).substring(2, 9);
         const getDateKey = (date) => {
@@ -110,19 +98,13 @@
         let state = { screen: 'landing', groupId: null, groupData: null, userName: '', currentDate: new Date(), showCreateForm: false, newSquadName: '', inputName: '', error: null, showLinkBox: false, loading: false, unsubscribe: null };
 
         async function init() {
-            console.log('🚀 Initializing app...');
             const urlParams = new URLSearchParams(window.location.search);
             const urlGroupId = urlParams.get('group');
-            console.log('Group ID from URL:', urlGroupId);
-            
             if (urlGroupId) {
                 state.loading = true;
                 render();
                 try {
-                    console.log('Loading group:', urlGroupId);
                     const docSnap = await getDoc(doc(db, 'groups', urlGroupId));
-                    console.log('Group exists:', docSnap.exists());
-                    
                     if (docSnap.exists()) {
                         state.groupId = urlGroupId;
                         state.groupData = docSnap.data();
@@ -144,16 +126,13 @@
                         state.screen = 'landing';
                     }
                 } catch (error) {
-                    console.error('❌ Error loading group:', error);
-                    state.error = 'Failed to load group: ' + error.message;
+                    console.error('Error:', error);
+                    state.error = 'Failed to load group.';
                     state.screen = 'landing';
                 }
                 state.loading = false;
-            } else {
-                console.log('No group ID in URL, showing landing page');
             }
             render();
-            console.log('✅ Init complete, screen:', state.screen);
         }
 
         window.createSquad = async function() {
@@ -189,6 +168,7 @@
                 state.userName = state.inputName.trim();
                 state.screen = 'group';
                 state.error = null;
+                state.inputName = '';
             } catch (error) {
                 console.error('Error:', error);
                 state.error = 'Failed to join group.';
@@ -229,25 +209,38 @@
 
         window.showCreateForm = () => { state.showCreateForm = true; state.error = null; render(); };
         window.cancelCreate = () => { state.showCreateForm = false; state.newSquadName = ''; state.error = null; render(); };
-        window.updateSquadName = (val) => { state.newSquadName = val; };
-        window.updateInputName = (val) => { state.inputName = val; };
+        window.updateSquadName = (val) => { state.newSquadName = val; render(); };
+        window.updateInputName = (val) => { state.inputName = val; render(); };
         window.toggleLinkBox = () => { state.showLinkBox = !state.showLinkBox; render(); };
         window.changeMonth = (dir) => { state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + dir); render(); };
 
         function render() {
             const app = document.getElementById('app');
+            
+            const activeElement = document.activeElement;
+            const wasInputFocused = activeElement && (activeElement.id === 'squadNameInput' || activeElement.id === 'nameInput');
+            
             if (state.loading) {
                 app.innerHTML = '<div class="bg-gradient"><div class="card text-center"><div class="spinner mb-2"></div><p style="color: #6b7280;">Loading...</p></div></div>';
                 return;
             }
             if (state.screen === 'landing') {
-                app.innerHTML = `<div class="bg-gradient"><div class="card"><div class="text-center mb-4"><div class="icon-circle"><svg width="40" height="40" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><h1 style="font-size: 2.25rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">SquadSync</h1><p style="color: #6b7280;">Find when everyone's free</p></div>${state.error ? `<div class="error-box">${state.error}</div>` : ''}${!state.showCreateForm ? '<button class="btn btn-primary" onclick="window.showCreateForm()"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Create New Squad</button><p class="text-center text-sm mt-4" style="color: #6b7280;">To join, ask a member to share their group link!</p>' : `<div><label style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Squad Name</label><input type="text" class="input mb-2" placeholder="e.g., Beach Weekend" value="${state.newSquadName}" oninput="window.updateSquadName(this.value)" onkeypress="if(event.key === 'Enter') window.createSquad()" autofocus><div class="flex gap-2"><button class="btn btn-secondary" onclick="window.cancelCreate()">Cancel</button><button class="btn btn-primary" onclick="window.createSquad()" ${!state.newSquadName.trim() ? 'disabled' : ''}><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>Create</button></div></div>`}<div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;"><h3 style="font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">How it works:</h3><ul style="list-style: none;"><li class="flex gap-2 mb-1" style="font-size: 0.875rem; color: #6b7280;"><span style="color: #4f46e5; font-weight: bold;">1.</span><span>Create a squad and share the link</span></li><li class="flex gap-2 mb-1" style="font-size: 0.875rem; color: #6b7280;"><span style="color: #4f46e5; font-weight: bold;">2.</span><span>Everyone marks when they're free</span></li><li class="flex gap-2" style="font-size: 0.875rem; color: #6b7280;"><span style="color: #4f46e5; font-weight: bold;">3.</span><span>See when the whole squad can meet</span></li></ul></div></div></div>`;
+                app.innerHTML = `<div class="bg-gradient"><div class="card"><div class="text-center mb-4"><div class="icon-circle"><svg width="40" height="40" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><h1 style="font-size: 2.25rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">SquadSync</h1><p style="color: #6b7280;">Find when everyone's free</p></div>${state.error ? `<div class="error-box">${state.error}</div>` : ''}${!state.showCreateForm ? '<button class="btn btn-primary" onclick="window.showCreateForm()"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Create New Squad</button><p class="text-center text-sm mt-4" style="color: #6b7280;">To join, ask a member to share their group link!</p>' : `<div><label style="display: block; font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Squad Name</label><input id="squadNameInput" type="text" class="input mb-2" placeholder="e.g., Beach Weekend" value="${state.newSquadName}" oninput="window.updateSquadName(this.value)" onkeypress="if(event.key === 'Enter') window.createSquad()"><div class="flex gap-2"><button class="btn btn-secondary" onclick="window.cancelCreate()">Cancel</button><button class="btn btn-primary" onclick="window.createSquad()" ${!state.newSquadName.trim() ? 'disabled' : ''}><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>Create</button></div></div>`}<div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;"><h3 style="font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">How it works:</h3><ul style="list-style: none;"><li class="flex gap-2 mb-1" style="font-size: 0.875rem; color: #6b7280;"><span style="color: #4f46e5; font-weight: bold;">1.</span><span>Create a squad and share the link</span></li><li class="flex gap-2 mb-1" style="font-size: 0.875rem; color: #6b7280;"><span style="color: #4f46e5; font-weight: bold;">2.</span><span>Everyone marks when they're free</span></li><li class="flex gap-2" style="font-size: 0.875rem; color: #6b7280;"><span style="color: #4f46e5; font-weight: bold;">3.</span><span>See when the whole squad can meet</span></li></ul></div></div></div>`;
             } else if (state.screen === 'join') {
-                app.innerHTML = `<div class="bg-gradient"><div class="card"><div class="text-center mb-4"><div class="icon-circle"><svg width="32" height="32" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><h2 style="font-size: 1.5rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">Join ${state.groupData?.name || 'Squad'}</h2><p style="color: #6b7280;">Enter your name to continue</p></div>${state.error ? `<div class="error-box">${state.error}</div>` : ''}<input type="text" class="input mb-2" placeholder="Your name" value="${state.inputName}" oninput="window.updateInputName(this.value)" onkeypress="if(event.key === 'Enter') window.joinGroup()" autofocus><button class="btn btn-primary" onclick="window.joinGroup()" ${!state.inputName.trim() ? 'disabled' : ''}><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>Join Squad</button>${state.groupData?.members && Object.keys(state.groupData.members).length > 0 ? `<div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;"><p class="text-sm mb-1" style="color: #6b7280;">Already in the squad:</p><div>${Object.keys(state.groupData.members).map(m => `<span class="badge badge-gray">${m}</span>`).join('')}</div></div>` : ''}</div></div>`;
+                app.innerHTML = `<div class="bg-gradient"><div class="card"><div class="text-center mb-4"><div class="icon-circle"><svg width="32" height="32" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div><h2 style="font-size: 1.5rem; font-weight: bold; color: #1f2937; margin-bottom: 0.5rem;">Join ${state.groupData?.name || 'Squad'}</h2><p style="color: #6b7280;">Enter your name to continue</p></div>${state.error ? `<div class="error-box">${state.error}</div>` : ''}<input id="nameInput" type="text" class="input mb-2" placeholder="Your name" value="${state.inputName}" oninput="window.updateInputName(this.value)" onkeypress="if(event.key === 'Enter') window.joinGroup()"><button class="btn btn-primary" onclick="window.joinGroup()" ${!state.inputName.trim() ? 'disabled' : ''}><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>Join Squad</button>${state.groupData?.members && Object.keys(state.groupData.members).length > 0 ? `<div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;"><p class="text-sm mb-1" style="color: #6b7280;">Already in the squad:</p><div>${Object.keys(state.groupData.members).map(m => `<span class="badge badge-gray">${m}</span>`).join('')}</div></div>` : ''}</div></div>`;
             } else if (state.screen === 'group') {
                 const monthDates = getMonthDates(state.currentDate.getFullYear(), state.currentDate.getMonth());
                 const monthName = state.currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                app.innerHTML = `<div class="bg-gray"><div class="cal-card"><div class="flex justify-between items-center mb-4"><div><h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937;">${state.groupData?.name || 'Squad'}</h1><p style="color: #6b7280;">Welcome, ${state.userName}!</p></div><button class="btn btn-primary" style="width: auto;" onclick="window.toggleLinkBox()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Share Link</button></div>${state.showLinkBox ? `<div class="link-box"><p style="font-size: 0.875rem; font-weight: 500; color: #312e81; margin-bottom: 0.5rem;">Share this link with your squad:</p><div class="flex gap-2 items-center"><input type="text" class="link-input" value="${window.location.origin}${window.location.pathname}?group=${state.groupId}" readonly onclick="this.select()"><button style="color: #4f46e5; font-weight: 500; font-size: 0.875rem; background: none; border: none; cursor: pointer;" onclick="window.toggleLinkBox()">Close</button></div><p class="text-xs mt-2" style="color: #4338ca;">Click the link to select, then copy (Ctrl+C or Cmd+C)</p></div>` : ''}<div>${Object.keys(state.groupData?.members || {}).map(m => `<span class="badge ${m === state.userName ? 'badge-primary' : 'badge-gray'}">${m}</span>`).join('')}</div></div><div class="cal-card"><div class="flex justify-between items-center mb-4"><button style="padding: 0.5rem 1rem; color: #6b7280; background: none; border: none; border-radius: 0.5rem; cursor: pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" onclick="window.changeMonth(-1)">← Prev</button><h2 style="font-size: 1.25rem; font-weight: bold; color: #1f2937;">${monthName}</h2><button style="padding: 0.5rem 1rem; color: #6b7280; background: none; border: none; border-radius: 0.5rem; cursor: pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" onclick="window.changeMonth(1)">Next →</button></div><div class="flex gap-2 mb-4 text-sm"><div class="flex items-center gap-2"><div style="width: 1rem; height: 1rem; background: #10b981; border-radius: 0.25rem;"></div><span style="color: #6b7280;">Everyone free</span></div><div class="flex items-center gap-2"><div style="width: 1rem; height: 1rem; background: #f59e0b; border-radius: 0.25rem;"></div><span style="color: #6b7280;">Some free</span></div><div class="flex items-center gap-2"><div style="width: 1rem; height: 1rem; background: #ef4444; border-radius: 0.25rem;"></div><span style="color: #6b7280;">None free</span></div></div><div class="cal-grid">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `<div class="day-header">${day}</div>`).join('')}${monthDates.map((date, i) => {
+                
+                // Sort members: current user first, then alphabetically
+                const members = Object.keys(state.groupData?.members || {});
+                const sortedMembers = members.sort((a, b) => {
+                    if (a === state.userName) return -1;
+                    if (b === state.userName) return 1;
+                    return a.localeCompare(b);
+                });
+                
+                app.innerHTML = `<div class="bg-gray"><div class="cal-card"><div class="flex justify-between items-center mb-4"><div><h1 style="font-size: 1.875rem; font-weight: bold; color: #1f2937;">${state.groupData?.name || 'Squad'}</h1><p style="color: #6b7280;">Welcome, ${state.userName}!</p></div><button class="btn btn-primary" style="width: auto;" onclick="window.toggleLinkBox()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Share Link</button></div>${state.showLinkBox ? `<div class="link-box"><p style="font-size: 0.875rem; font-weight: 500; color: #312e81; margin-bottom: 0.5rem;">Share this link with your squad:</p><div class="flex gap-2 items-center"><input type="text" class="link-input" value="${window.location.origin}${window.location.pathname}?group=${state.groupId}" readonly onclick="this.select()"><button style="color: #4f46e5; font-weight: 500; font-size: 0.875rem; background: none; border: none; cursor: pointer;" onclick="window.toggleLinkBox()">Close</button></div><p class="text-xs mt-2" style="color: #4338ca;">Click the link to select, then copy (Ctrl+C or Cmd+C)</p></div>` : ''}<div>${sortedMembers.map(m => `<span class="badge ${m === state.userName ? 'badge-primary' : 'badge-gray'}">${m}</span>`).join('')}</div></div><div class="cal-card"><div class="flex justify-between items-center mb-4"><button style="padding: 0.5rem 1rem; color: #6b7280; background: none; border: none; border-radius: 0.5rem; cursor: pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" onclick="window.changeMonth(-1)">← Prev</button><h2 style="font-size: 1.25rem; font-weight: bold; color: #1f2937;">${monthName}</h2><button style="padding: 0.5rem 1rem; color: #6b7280; background: none; border: none; border-radius: 0.5rem; cursor: pointer;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" onclick="window.changeMonth(1)">Next →</button></div><div class="flex gap-2 mb-4 text-sm"><div class="flex items-center gap-2"><div style="width: 1rem; height: 1rem; background: #22c55e; border-radius: 0.25rem;"></div><span style="color: #6b7280;">Everyone free</span></div><div class="flex items-center gap-2"><div style="width: 1rem; height: 1rem; background: #f59e0b; border-radius: 0.25rem;"></div><span style="color: #6b7280;">Some free</span></div><div class="flex items-center gap-2"><div style="width: 1rem; height: 1rem; background: #ef4444; border-radius: 0.25rem;"></div><span style="color: #6b7280;">None free</span></div></div><div class="cal-grid">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `<div class="day-header">${day}</div>`).join('')}${monthDates.map((date, i) => {
                     if (!date) return '<div></div>';
                     const status = getDateStatus(date);
                     const isAvail = isUserAvailable(date);
@@ -260,6 +253,16 @@
                     }
                     return `<button class="cal-day ${colorClass}" ${isPast ? 'disabled' : ''} onclick="${!isPast ? `window.toggleAvailability('${date.toISOString()}')` : ''}">${date.getDate()}${isAvail && !isPast ? '<span class="checkmark">✓</span>' : ''}</button>`;
                 }).join('')}</div><p class="text-center text-sm mt-4" style="color: #6b7280;">Click any date to mark when you're available</p></div></div>`;
+            }
+            
+            if (wasInputFocused) {
+                setTimeout(() => {
+                    const input = document.getElementById('squadNameInput') || document.getElementById('nameInput');
+                    if (input) {
+                        input.focus();
+                        input.setSelectionRange(input.value.length, input.value.length);
+                    }
+                }, 0);
             }
         }
 
